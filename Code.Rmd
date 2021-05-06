@@ -1,0 +1,184 @@
+---
+title: "STAT 403 PROJECT"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+
+
+data=read.csv("Ahmad Sharjeel 301307811 Coffee Dataset.csv")
+data
+table1=data[1:30,]
+table2=data[31:60,]
+table3=data[61:90,]
+```
+
+
+```{r}
+##All 3 treatments
+table1
+table2
+table3
+```
+```{r}
+data$DType = factor(data$Type)
+data$Change = as.numeric(as.character(data$Change))
+
+Mean=tapply(data$Change,data$DType,mean)
+SD = tapply(data$Change,data$DType, sd)
+SampleSize=tapply(data$Change,data$DType,length)
+Min=tapply(data$Change,data$DType,min)
+Max=tapply(data$Change,data$DType,max)
+Median=tapply(data$Change,data$DType,median)
+summary.df=data.frame(SampleSize,Mean,Median,SD,Min,Max)
+```
+
+
+```{r}
+###Histograms
+par(mfrow=c(3,2))
+
+hist(table1$Change,xlab = "Words remembered",ylab="number of people",main = "Treatment 1(60ml-Coffee Espresso)")
+
+hist(table2$Change,xlab = "Words remembered",ylab="number of people",main = "Treatment 2(120ml-Coffee Espresso)")
+
+hist(table3$Change,xlab = "Words remembered",ylab="number of people",main = "Treatment 3(60ml-Water)")
+
+
+```
+```{r}
+##Summary Statistics Table
+print("Summary Statistics table")
+summary.df
+
+```
+
+
+```{r}
+###before transformation
+#Regression
+fit=lm(data$Change ~ data$DType,data)
+summary(fit)
+
+```
+
+
+```{r}
+fitness_aov = aov( data$Change~ data$DType,data)
+summary(fitness_aov)
+
+```
+```{r}
+stdres = rstandard(fitness_aov) #obtain standardized residuals from aov object
+pred = predict(fitness_aov)  #obtain predicted
+
+plot(pred, stdres, 
+     main="Standardized Residual Plot for change in time AOV ",
+     xlab="Predicted Values", ylab="Std. Residuals", cex.main = 1.3, cex.lab = 1.25)
+abline(h=0, col="red", lwd=2)
+abline(h = 2 , col="blue", lty=2)
+abline(h = -2, col="blue", lty=2)
+
+lines(lowess(pred,stdres))
+
+
+```
+```{r}
+
+#Normality Test
+shapiro.test(data$Change)
+
+# normal quantile plot
+qqnorm(stdres, ylab="Standardized residuals", xlab="Normal Scores", 
+       main="Normal Quantile Plot for Changed in Words remembered")
+qqline(stdres)
+
+
+
+```
+
+
+```{r}
+## Test for Variance
+#Before transformation SD TEST
+library(car)
+SD = tapply(data$Change,data$DType, sd)
+SD
+##ratio is less than 2 so constant variance condition is met
+
+#Before Transformation Levene Test
+leveneTest(data$Change~data$DType,data)
+##p-values greater than 0.05 then constant variance met
+
+
+```
+Transformations
+```{r}
+
+fit_transform=lm(1/(data$Change+0.16)~ data$DType,data)
+summary(fit_transform)
+
+fitness_aov_transform = aov(1/(data$Change+0.16)~ data$DType,data)
+summary(fitness_aov_transform)
+
+
+```
+```{r}
+
+#Constatnt Variance tests
+
+#After transformation SD TEST
+
+SD = tapply(1/(data$Change+0.16),data$DType, sd)
+SD
+
+
+leveneTest(1/(data$Change+0.16)~data$DType,data)
+
+
+```
+
+```{r}
+
+fitness_aov_transform_Normality = aov(1/(data$Change+0.16)~ data$DType,data)
+
+stdres_transform_Normality = rstandard(fitness_aov_transform_Normality) #obtain standardized residuals from aov object
+
+
+# normal quantile plot
+qqnorm(stdres_transform_Normality, ylab="Standardized residuals", xlab="Normal Scores", 
+       main="Normal Quantile Plot for change in words remembered(Transformed)")
+qqline(stdres_transform_Normality)
+
+
+```
+```{r}
+
+
+print("Using tukey HSD to reduce family-wise error rate")
+
+# Generate ANOVA table. Need this for input into Tukey function.
+Time_aov = aov(1/(data$Change+0.16)~data$DType,data)
+summary(Time_aov)
+
+# Tukey's HSD - this gives the adjusted p-values
+TukeyHSD(Time_aov)
+
+
+# Tukey's HSD - chart of confidence intervals
+plot(TukeyHSD(Time_aov))
+
+
+
+```
+
